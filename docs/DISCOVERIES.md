@@ -7,6 +7,12 @@ Hard cap: 1500 dòng → block commit.
 
 ---
 
+## 2026-05-28 — P003 rotate-check shipped
+
+`doctor rotate-check` implemented: `toml::from_str` parse of `.sos-stack.toml` `[rotate]` (files/soft/hard, per-field fallback to defaults 1000/1500). File missing → skip (no drift). Worst severity wins: exit 0 clean, 1 warn, 2 block. 7 integration tests pass. Toml parse error → exit 2. src/main.rs not touched (already wired). See `docs/discoveries/P003.md`.
+
+---
+
 ## 2026-05-28 — P002 validate-map shipped
 
 `doctor validate-map` implemented: serde-typed AgentMap parse + 5-category walker (edit/read_shallow/read_deep/research_gate/contract_test) + Path::exists + anchor-grep flexible match (markdown heading + Rust symbol, case-insensitive + hyphen↔space tolerant). Glob entries (`**`) skipped. 7 integration tests pass. Exit codes: 0 clean, 1 drift, 2 yaml error. See `docs/discoveries/P002.md`.
