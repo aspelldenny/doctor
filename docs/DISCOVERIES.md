@@ -7,6 +7,12 @@ Hard cap: 1500 dòng → block commit.
 
 ---
 
+## 2026-05-28 — P001 lane-check shipped
+
+`doctor lane-check` implemented: regex lane-parse + 3-metric counter (lines/anchors/constraints) + Normal/Fast/Guarded budget gate. 8 integration tests pass. Edge case: Debate Log numbered tables add to anchor count (PARTIAL oracle, documented). See `docs/discoveries/P001.md`.
+
+---
+
 ## 2026-05-28 — Skeleton bootstrap
 
 Doctor repo bootstrapped from `~/sos-kit/INSTALL.md` v2.2 install path.
