@@ -15,11 +15,13 @@
 //! Doctrine: WORKFLOW_V2.2.md §4.
 //! Mã phiếu xác chết: DISCOVERIES tarot 265KB — anchor pointed at sections no longer present.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::Args as ClapArgs;
 use regex::Regex;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+
+use crate::cli::RunOutput;
 
 #[derive(ClapArgs)]
 pub struct Args {
@@ -62,17 +64,24 @@ struct Surface {
 }
 
 // --------------------------------------------------------------------------
-// Public entry point
+// execute() — returns RunOutput; IO/parse error bubbles as Err
 // --------------------------------------------------------------------------
 
-pub fn run(args: Args) -> Result<()> {
+pub fn execute(args: Args) -> Result<RunOutput> {
+    let mut out = RunOutput::default();
+
     let raw = std::fs::read_to_string(&args.map)
         .map_err(|e| anyhow!("cannot read map {:?}: {}", args.map, e))?;
 
-    let map: AgentMap = serde_yaml::from_str(&raw).map_err(|e| {
-        eprintln!("error: yaml parse failed: {}", e);
-        std::process::exit(2);
-    })?;
+    let map: AgentMap = match serde_yaml::from_str(&raw) {
+        Ok(m) => m,
+        Err(e) => {
+            out.stderr
+                .push_str(&format!("error: yaml parse failed: {}\n", e));
+            out.exit_code = 2;
+            return Ok(out);
+        }
+    };
 
     let mut drifts: Vec<String> = Vec::new();
 
@@ -90,15 +99,32 @@ pub fn run(args: Args) -> Result<()> {
     // in the current repo context).
 
     if drifts.is_empty() {
-        println!("OK — no drift");
-        Ok(())
+        out.stdout.push_str("OK — no drift\n");
     } else {
         drifts.sort();
         for d in &drifts {
-            eprintln!("{}", d);
+            out.stderr.push_str(d);
+            out.stderr.push('\n');
         }
-        std::process::exit(1);
+        out.exit_code = 1;
     }
+
+    Ok(out)
+}
+
+/// Thin CLI wrapper — calls execute(), prints output, maps exit_code → process exit.
+pub fn run(args: Args) -> Result<()> {
+    let out = execute(args)?;
+    if !out.stdout.is_empty() {
+        print!("{}", out.stdout);
+    }
+    if !out.stderr.is_empty() {
+        eprint!("{}", out.stderr);
+    }
+    if out.exit_code != 0 {
+        std::process::exit(out.exit_code as i32);
+    }
+    Ok(())
 }
 
 // --------------------------------------------------------------------------

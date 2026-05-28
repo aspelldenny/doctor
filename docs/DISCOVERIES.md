@@ -7,6 +7,12 @@ Hard cap: 1500 dòng → block commit.
 
 ---
 
+## 2026-05-28 — P005 MCP serve shipped
+
+`doctor serve` MCP stdio JSON-RPC 2.0 server shipped via rmcp 1.7.0. 4 tools: lane_check, validate_map, rotate_check, runtime_scan. Refactored 4 subcmds to execute/run split (RunOutput struct in cli/mod.rs). DoctorServer unit struct, sync tool fns, #[tool_router] + #[tool_handler] two-step. Manual smoke: tools/list returns 4 tools confirmed. 29/29 tests pass (27 regression + 2 smoke). **MVP sprint COMPLETE — 5/5 phiếu shipped.** See `docs/discoveries/P005.md`.
+
+---
+
 ## 2026-05-28 — P004 runtime-scan shipped
 
 `doctor runtime-scan` implemented: 9 regex patterns across 5 vendor whitelist (GitHub classic/OAuth/user/server/fine-grained PAT, AWS access key, AWS secret key, Anthropic sk-ant-*, OpenAI legacy sk-*). Scan targets: `.git/config`, `.mcp.json`, `.env*` (repo root); `~/.ssh/config`/`.gitconfig`/`.netrc` opt-in via `--include-home`. Output sanitized (`path:line: pattern_name`, no secret content). Exit 0 clean, exit 1 leak. 8 integration tests pass. src/main.rs not touched (already wired). sk-proj- format deferred Python pilot vòng 2 per SOUL line 3. See `docs/discoveries/P004.md`.

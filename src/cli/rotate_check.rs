@@ -18,11 +18,13 @@
 //! Doctrine: WORKFLOW_V2.2.md §6.
 //! Mã phiếu xác chết: DISCOVERIES tarot 265KB = ~5300 dòng = 5× over hard cap.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::Args as ClapArgs;
 use serde::Deserialize;
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
+
+use crate::cli::RunOutput;
 
 #[derive(ClapArgs)]
 pub struct Args {
@@ -60,12 +62,20 @@ const DEFAULT_SOFT: usize = 1000;
 const DEFAULT_HARD: usize = 1500;
 
 // ---------------------------------------------------------------------------
-// Public entry point
+// execute() — returns RunOutput; IO errors bubble as Err
 // ---------------------------------------------------------------------------
 
-pub fn run(args: Args) -> Result<()> {
+pub fn execute(args: Args) -> Result<RunOutput> {
+    let mut out = RunOutput::default();
+
     let repo_root = args.repo.unwrap_or_else(|| PathBuf::from("."));
-    let (files, soft, hard) = resolve_config(&repo_root)?;
+    let (files, soft, hard) = resolve_config(&repo_root, &mut out)?;
+
+    // resolve_config sets exit_code=2 on toml parse error and returns Ok(out) for
+    // the early-return path; if exit_code is already set, return immediately.
+    if out.exit_code != 0 {
+        return Ok(out);
+    }
 
     let mut worst: u8 = 0;
     let mut report: Vec<String> = Vec::new();
@@ -97,18 +107,27 @@ pub fn run(args: Args) -> Result<()> {
     }
 
     for line in &report {
-        eprintln!("{}", line);
+        out.stderr.push_str(line);
+        out.stderr.push('\n');
     }
 
-    match worst {
-        0 => Ok(()),
-        1 => {
-            std::process::exit(1);
-        }
-        _ => {
-            std::process::exit(2);
-        }
+    out.exit_code = worst;
+    Ok(out)
+}
+
+/// Thin CLI wrapper — calls execute(), prints output, maps exit_code → process exit.
+pub fn run(args: Args) -> Result<()> {
+    let out = execute(args)?;
+    if !out.stdout.is_empty() {
+        print!("{}", out.stdout);
     }
+    if !out.stderr.is_empty() {
+        eprint!("{}", out.stderr);
+    }
+    if out.exit_code != 0 {
+        std::process::exit(out.exit_code as i32);
+    }
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -118,7 +137,11 @@ pub fn run(args: Args) -> Result<()> {
 /// Load `.sos-stack.toml` from repo root if present, parse [rotate] table.
 /// Missing file or missing [rotate] section → all defaults.
 /// Per-field fallback (not all-or-nothing).
-fn resolve_config(repo_root: &Path) -> Result<(Vec<String>, usize, usize)> {
+/// On toml parse error: sets out.exit_code=2 + out.stderr message, returns Ok(early).
+fn resolve_config(
+    repo_root: &Path,
+    out: &mut RunOutput,
+) -> Result<(Vec<String>, usize, usize)> {
     let toml_path = repo_root.join(".sos-stack.toml");
 
     if !toml_path.exists() {
@@ -128,10 +151,17 @@ fn resolve_config(repo_root: &Path) -> Result<(Vec<String>, usize, usize)> {
     let content = read_to_string(&toml_path)
         .map_err(|e| anyhow!("cannot read .sos-stack.toml: {}", e))?;
 
-    let stack: SosStack = toml::from_str(&content).map_err(|e| {
-        eprintln!("error: toml parse error in .sos-stack.toml: {}", e);
-        std::process::exit(2);
-    })?;
+    let stack: SosStack = match toml::from_str(&content) {
+        Ok(s) => s,
+        Err(e) => {
+            out.stderr.push_str(&format!(
+                "error: toml parse error in .sos-stack.toml: {}\n",
+                e
+            ));
+            out.exit_code = 2;
+            return Ok(default_tuple());
+        }
+    };
 
     let rotate = match stack.rotate {
         None => return Ok(default_tuple()),

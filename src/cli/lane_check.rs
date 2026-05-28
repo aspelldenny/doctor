@@ -7,10 +7,12 @@
 //!   1 — budget exceeded (stderr reason)
 //!   2 — Lane field missing from phiếu header
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::Args as ClapArgs;
 use regex::Regex;
 use std::path::PathBuf;
+
+use crate::cli::RunOutput;
 
 #[derive(ClapArgs)]
 pub struct Args {
@@ -19,7 +21,11 @@ pub struct Args {
     pub ticket: PathBuf,
 }
 
-pub fn run(args: Args) -> Result<()> {
+/// Extract logic — returns RunOutput capturing stdout/stderr/exit_code.
+/// IO errors bubble as Err (caller maps to exit 2).
+pub fn execute(args: Args) -> Result<RunOutput> {
+    let mut out = RunOutput::default();
+
     let content = std::fs::read_to_string(&args.ticket)
         .map_err(|e| anyhow!("cannot read ticket {:?}: {}", args.ticket, e))?;
 
@@ -29,15 +35,18 @@ pub fn run(args: Args) -> Result<()> {
     let lane = match lane_re.captures(&content) {
         Some(caps) => caps[1].to_string(),
         None => {
-            eprintln!("error: ticket missing Lane field (expected **Lane:** Normal|Guarded|Fast)");
-            std::process::exit(2);
+            out.stderr.push_str(
+                "error: ticket missing Lane field (expected **Lane:** Normal|Guarded|Fast)\n",
+            );
+            out.exit_code = 2;
+            return Ok(out);
         }
     };
 
     // Guarded: no cap — return immediately.
     if lane.eq_ignore_ascii_case("Guarded") {
-        println!("OK (Guarded — no cap)");
-        return Ok(());
+        out.stdout.push_str("OK (Guarded — no cap)\n");
+        return Ok(out);
     }
 
     // --- Task 2: count 3 metrics ---
@@ -66,22 +75,42 @@ pub fn run(args: Args) -> Result<()> {
         }
         if !violations.is_empty() {
             for v in &violations {
-                eprintln!("{}", v);
+                out.stderr.push_str(v);
+                out.stderr.push('\n');
             }
-            std::process::exit(1);
+            out.exit_code = 1;
+            return Ok(out);
         }
-        println!(
-            "OK (Normal — {} lines, {} anchors, {} constraints)",
+        out.stdout.push_str(&format!(
+            "OK (Normal — {} lines, {} anchors, {} constraints)\n",
             total_lines, anchors, constraints
-        );
+        ));
     } else if lane.eq_ignore_ascii_case("Fast") {
         if total_lines > 100 {
-            eprintln!("Fast lane: {} lines > 100 cap", total_lines);
-            std::process::exit(1);
+            out.stderr
+                .push_str(&format!("Fast lane: {} lines > 100 cap\n", total_lines));
+            out.exit_code = 1;
+            return Ok(out);
         }
-        println!("OK (Fast — {} lines)", total_lines);
+        out.stdout
+            .push_str(&format!("OK (Fast — {} lines)\n", total_lines));
     }
 
+    Ok(out)
+}
+
+/// Thin CLI wrapper — calls execute(), prints output, maps exit_code → process exit.
+pub fn run(args: Args) -> Result<()> {
+    let out = execute(args)?;
+    if !out.stdout.is_empty() {
+        print!("{}", out.stdout);
+    }
+    if !out.stderr.is_empty() {
+        eprint!("{}", out.stderr);
+    }
+    if out.exit_code != 0 {
+        std::process::exit(out.exit_code as i32);
+    }
     Ok(())
 }
 

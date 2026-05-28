@@ -13,10 +13,11 @@
 //! Lane-check đếm dòng. Validate-map check path. Rotate-check đếm dòng. Runtime-scan grep token.
 //! Đừng để nó ôm logic judgment.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 
 mod cli;
+mod mcp;
 
 #[derive(Parser)]
 #[command(name = "doctor", version, about = "v2.2 mechanical gate enforcement")]
@@ -52,8 +53,11 @@ fn main() -> Result<()> {
         Commands::RotateCheck(args) => cli::rotate_check::run(args),
         Commands::RuntimeScan(args) => cli::runtime_scan::run(args),
         Commands::Serve => {
-            eprintln!("MCP serve mode — phiếu P005 (deferred)");
-            std::process::exit(2);
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .context("build tokio runtime")?;
+            rt.block_on(mcp::serve())
         }
     }
 }

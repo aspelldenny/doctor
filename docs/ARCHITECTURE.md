@@ -4,23 +4,31 @@
 
 ```
 src/
-├── main.rs              # clap subcmd dispatch
-├── lib.rs               # (deferred — chưa cần khi subcmd trong cli/ module)
-└── cli/
-    ├── mod.rs           # subcmd module exports
-    ├── lane_check.rs    # §1 lane budget (P001)
-    ├── validate_map.rs  # §4 AGENT_MAP path/anchor (P002)
-    ├── rotate_check.rs  # §6 dòng cap (P003)
-    └── runtime_scan.rs  # Sub-mech F token leak (P004)
+├── main.rs              # clap subcmd dispatch; Serve arm builds tokio runtime + block_on mcp::serve()
+├── lib.rs               # (deferred — not needed with subcmd-in-cli/ pattern)
+├── cli/
+│   ├── mod.rs           # subcmd module exports + shared pub struct RunOutput
+│   ├── lane_check.rs    # §1 lane budget (P001) — pub fn execute() + pub fn run()
+│   ├── validate_map.rs  # §4 AGENT_MAP path/anchor (P002) — execute/run split
+│   ├── rotate_check.rs  # §6 dòng cap (P003) — execute/run split
+│   └── runtime_scan.rs  # Sub-mech F token leak (P004) — execute/run split
+└── mcp/
+    └── mod.rs           # DoctorServer (#[tool_router] + #[tool_handler]), serve() async fn (P005)
 ```
 
-Future addition (P005 MCP):
+### RunOutput shared struct (P005 — src/cli/mod.rs)
+
+```rust
+pub struct RunOutput {
+    pub exit_code: u8,    // 0=ok, 1=soft fail, 2=hard error
+    pub stdout: String,   // captured stdout
+    pub stderr: String,   // captured stderr
+}
 ```
-src/
-└── mcp/
-    ├── mod.rs
-    └── tools.rs         # rmcp tool_router with 4 tools
-```
+
+Each subcmd exposes:
+- `pub fn execute(args: Args) -> Result<RunOutput>` — pure logic, no side effects, IO errors bubble as Err
+- `pub fn run(args: Args) -> Result<()>` — thin CLI wrapper: call execute, print, std::process::exit(N)
 
 ## 4 subcmd contract
 
@@ -90,13 +98,17 @@ pub fn run(args: Args) -> Result<()> {
 }
 ```
 
-## MCP serve (P005, post-MVP)
+## MCP serve (P005 — SHIPPED)
 
-Pattern khớp advisory-inbox `serve` subcmd:
-- Use `rmcp` 1.7.0 với feature `["macros", "schemars"]`
-- `#[tool_router]` on impl block
-- Each tool wraps existing `cli::*::run()` function (Strategy B: extract `pub fn execute()` from CLI run)
-- `#[tool_handler]` on `ServerHandler` impl với two-step pattern (avoid `from_build_env` reading rmcp crate name — see advisory-inbox P011 retro)
+Pattern: rmcp 1.7.0 `#[tool_router]` + `#[tool_handler]` two-step (advisory-inbox precedent).
+- `DoctorServer` unit struct (no field) in `src/mcp/mod.rs`
+- 4 sync tool fns: `lane_check`, `validate_map`, `rotate_check`, `runtime_scan`
+  - Each: `fn &self, Parameters(p): Parameters<XInput>) -> Result<CallToolResult, ErrorData>`
+  - Body: build `cli::<subcmd>::Args`, call `<subcmd>::execute(args)`, map via `run_to_call_result()`
+- `run_to_call_result(Result<RunOutput>) -> Result<CallToolResult, ErrorData>`: exit_code!=0 → is_error=true
+- `get_info()` uses `Implementation::new(env!("CARGO_PKG_NAME"), ...)` — reads doctor's Cargo.toml, not rmcp's
+- `pub async fn serve()` in `src/mcp/mod.rs` — rmcp stdio transport
+- main.rs Serve arm: `tokio::runtime::Builder::new_current_thread().enable_all().build()?.block_on(mcp::serve())`
 
 ## Distribution
 

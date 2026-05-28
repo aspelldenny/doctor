@@ -27,6 +27,8 @@ use regex::Regex;
 use std::fs::{read_dir, read_to_string};
 use std::path::{Path, PathBuf};
 
+use crate::cli::RunOutput;
+
 #[derive(ClapArgs)]
 pub struct Args {
     /// Path to repo root (defaults to cwd).
@@ -135,10 +137,12 @@ fn collect_targets(repo_root: &Path, include_home: bool) -> Result<Vec<PathBuf>>
 }
 
 // ---------------------------------------------------------------------------
-// Public entry point
+// execute() — returns RunOutput; IO errors bubble as Err
 // ---------------------------------------------------------------------------
 
-pub fn run(args: Args) -> Result<()> {
+pub fn execute(args: Args) -> Result<RunOutput> {
+    let mut out = RunOutput::default();
+
     let repo_root = args.repo.unwrap_or_else(|| PathBuf::from("."));
     let patterns = compile_patterns()?;
     let targets = collect_targets(&repo_root, args.include_home)?;
@@ -166,13 +170,29 @@ pub fn run(args: Args) -> Result<()> {
     }
 
     if leaks.is_empty() {
-        return Ok(()); // exit 0 — clean
+        return Ok(out); // exit 0 — clean
     }
 
     for leak in &leaks {
-        eprintln!("{leak}");
+        out.stderr.push_str(leak);
+        out.stderr.push('\n');
     }
+    out.exit_code = 1;
 
-    // Return Err so main.rs dispatch maps to exit 1.
-    Err(anyhow::anyhow!("runtime-scan: {} leak(s) found", leaks.len()))
+    Ok(out)
+}
+
+/// Thin CLI wrapper — calls execute(), prints output, maps exit_code → process exit.
+pub fn run(args: Args) -> Result<()> {
+    let out = execute(args)?;
+    if !out.stdout.is_empty() {
+        print!("{}", out.stdout);
+    }
+    if !out.stderr.is_empty() {
+        eprint!("{}", out.stderr);
+    }
+    if out.exit_code != 0 {
+        std::process::exit(out.exit_code as i32);
+    }
+    Ok(())
 }
