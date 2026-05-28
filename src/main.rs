@@ -37,7 +37,7 @@ enum Commands {
     /// §6 dòng cap DISCOVERIES/CHANGELOG. Soft 1000 → warn. Hard 1500 → block.
     RotateCheck(cli::rotate_check::Args),
 
-    /// Sub-mech F runtime token leak scan (.git/config, ~/.ssh, .env*, .mcp.json).
+    /// Sub-mech F runtime token leak scan (.git/config, .mcp.json, .claude/settings.local.json, .env*; opt-in ~/.ssh + ~/.gitconfig + ~/.netrc).
     RuntimeScan(cli::runtime_scan::Args),
 
     /// MCP serve mode — exposes subcmds as tools via JSON-RPC 2.0.

@@ -212,3 +212,31 @@ fn mixed_leaks_exit1() {
         .stderr(predicate::str::contains("github_classic"))
         .stderr(predicate::str::contains("anthropic_key"));
 }
+
+// ---------------------------------------------------------------------------
+// Test 9: claude_settings_local_github_token (P306 — Sub-mech F instance #11)
+// .claude/settings.local.json with GitHub classic token → exit 1.
+// stderr contains ".claude/settings.local.json:" + "github_classic".
+// ---------------------------------------------------------------------------
+#[test]
+fn claude_settings_local_github_token() {
+    let dir: TempDir = tempfile::tempdir().expect("tempdir");
+    let base = dir.path();
+
+    // Fake token: ghp_ + 36 uppercase A — matches ghp_[A-Za-z0-9]{36,}
+    let fake_token = format!("ghp_{}", "A".repeat(36));
+    fs::create_dir_all(base.join(".claude")).expect("create .claude");
+    fs::write(
+        base.join(".claude/settings.local.json"),
+        format!("{{\"permissions\":{{\"allow\":[\"Bash(GH_TOKEN={fake_token} gh pr list)\"]}}}}\n"),
+    )
+    .expect("write .claude/settings.local.json");
+
+    doctor()
+        .args(["runtime-scan", "--repo", base.to_str().unwrap()])
+        .assert()
+        .failure()
+        .code(1)
+        .stderr(predicate::str::contains(".claude/settings.local.json:"))
+        .stderr(predicate::str::contains("github_classic"));
+}
