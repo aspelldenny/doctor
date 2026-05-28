@@ -7,6 +7,12 @@ Hard cap: 1500 dòng → block commit.
 
 ---
 
+## 2026-05-28 — P002 validate-map shipped
+
+`doctor validate-map` implemented: serde-typed AgentMap parse + 5-category walker (edit/read_shallow/read_deep/research_gate/contract_test) + Path::exists + anchor-grep flexible match (markdown heading + Rust symbol, case-insensitive + hyphen↔space tolerant). Glob entries (`**`) skipped. 7 integration tests pass. Exit codes: 0 clean, 1 drift, 2 yaml error. See `docs/discoveries/P002.md`.
+
+---
+
 ## 2026-05-28 — P001 lane-check shipped
 
 `doctor lane-check` implemented: regex lane-parse + 3-metric counter (lines/anchors/constraints) + Normal/Fast/Guarded budget gate. 8 integration tests pass. Edge case: Debate Log numbered tables add to anchor count (PARTIAL oracle, documented). See `docs/discoveries/P001.md`.
