@@ -1,1 +1,22 @@
 /target
+
+# Sos-kit v2.2 runtime state (orchestrator marker, etc.)
+.sos-state/
+.claude/.architect-active
+
+# Per-user local settings (NOT committed)
+.claude/settings.local.json
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+
+# Backup
+/.backup/
+Cargo.lock.bak
