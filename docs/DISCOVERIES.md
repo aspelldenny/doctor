@@ -7,6 +7,12 @@ Hard cap: 1500 dòng → block commit.
 
 ---
 
+## 2026-05-28 — P006 lane-check scope fix shipped
+
+`count_task0_anchors()` extracted: scopes anchor counter to `## Task 0` heading → next `##` heading (level-2 only, fuzzy case-insensitive). Pre-fix: all `| N |` rows across whole phiếu counted (Debate Log table inflated P001 from 5→10 → false exit 1). Post-fix: P001 dogfood exit 0. 3 new tests (scope-fix fixture + no-task0 fixture + P001 real file regression). 32/32 tests pass. See `docs/discoveries/P006.md`.
+
+---
+
 ## 2026-05-28 — P005 MCP serve shipped
 
 `doctor serve` MCP stdio JSON-RPC 2.0 server shipped via rmcp 1.7.0. 4 tools: lane_check, validate_map, rotate_check, runtime_scan. Refactored 4 subcmds to execute/run split (RunOutput struct in cli/mod.rs). DoctorServer unit struct, sync tool fns, #[tool_router] + #[tool_handler] two-step. Manual smoke: tools/list returns 4 tools confirmed. 29/29 tests pass (27 regression + 2 smoke). **MVP sprint COMPLETE — 5/5 phiếu shipped.** See `docs/discoveries/P005.md`.

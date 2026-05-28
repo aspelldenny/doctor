@@ -1,6 +1,18 @@
 # BACKLOG — doctor
 
-## Active sprint — MVP build (5 phiếu) — ✅ SHIPPED 2026-05-28
+## Active sprint — post-MVP fix (1 phiếu)
+
+- [ ] **P006** — `doctor lane-check` anchor counter scope fix
+  - Bug: anchor counter đếm TẤT CẢ table rows kiểu `| <N> |` trên toàn phiếu, lẫn Debate Log Turn table (5 row tự template) → false positive khi phiếu thực sự ≤ 5 Task 0 anchor.
+  - Dogfood evidence: `doctor lane-check --ticket docs/ticket/P001-lane-check.md` → exit 1 "Normal lane: 10 anchors > 5 cap" trong khi P001 có đúng 5 Task 0 anchor.
+  - Doctrine: WORKFLOW_V2.2.md §1 — anchor count = Task 0 row only.
+  - Fix: scope counter giữa heading `## Task 0` (hoặc fuzzy `Task 0 — Verification Anchors`) → heading `##` tiếp theo. Chỉ đếm table rows trong scope.
+  - Edit_allow: `src/cli/lane_check.rs`, `tests/lane_check_test.rs`.
+  - Regression: 5 test lane_check + 24 test khác phải pass. Thêm 1 test case fixture phiếu có Debate Log table to assert chỉ đếm Task 0.
+  - Lane: Normal (Tầng 2 — 2 file, ≤ 100 LOC).
+  - Mã phiếu xác chết: P001 self-eat dogfood gate fired 2026-05-28.
+
+## MVP build — ✅ SHIPPED 2026-05-28 (5 phiếu)
 
 - [x] **P001** — `doctor lane-check` subcmd
   - Doctrine: WORKFLOW_V2.2.md §1 lane budget

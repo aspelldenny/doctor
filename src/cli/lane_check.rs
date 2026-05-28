@@ -54,9 +54,8 @@ pub fn execute(args: Args) -> Result<RunOutput> {
     // 1. Total lines
     let total_lines = content.lines().count();
 
-    // 2. Anchor rows — Task 0 table rows starting with `| <digit(s)> |`
-    let anchor_re = Regex::new(r"(?m)^\|\s*\d+\s*\|").unwrap();
-    let anchors = anchor_re.find_iter(&content).count();
+    // 2. Anchor rows — scoped to `## Task 0` section only (P006 scope fix)
+    let anchors = count_task0_anchors(&content);
 
     // 3. Numbered constraints under "## Luật chơi" heading
     let constraints = count_constraints(&content);
@@ -112,6 +111,30 @@ pub fn run(args: Args) -> Result<()> {
         std::process::exit(out.exit_code as i32);
     }
     Ok(())
+}
+
+/// Count Task 0 anchor rows. Scope: from `## Task 0` heading (fuzzy match
+/// case-insensitive, allows "Task 0", "Task 0 — Verification Anchors",
+/// "Task 0: ...") to the next `##` heading (sibling, not `###` subheading)
+/// or EOF. Returns 0 if no `## Task 0` heading found (SOUND — no error,
+/// phiếu without Task 0 is design concern, not lane-check concern).
+fn count_task0_anchors(content: &str) -> usize {
+    let heading_re = Regex::new(r"(?mi)^##\s+Task\s+0\b").unwrap();
+    let Some(start_match) = heading_re.find(content) else {
+        return 0;
+    };
+    let after_heading = &content[start_match.end()..];
+
+    // Find next `## ` sibling heading (NOT `###`).
+    let next_heading_re = Regex::new(r"(?m)^##\s").unwrap();
+    let scope_end = next_heading_re
+        .find(after_heading)
+        .map(|m| m.start())
+        .unwrap_or(after_heading.len());
+    let scope = &after_heading[..scope_end];
+
+    let row_re = Regex::new(r"(?m)^\|\s*\d+\s*\|").unwrap();
+    row_re.find_iter(scope).count()
 }
 
 /// Count numbered-list items (`^\d+\. `) under the "## Luật chơi" heading,

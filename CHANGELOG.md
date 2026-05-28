@@ -7,6 +7,10 @@ Format: Keep a Changelog (https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- P006 — `doctor lane-check` anchor counter scoped to Task 0 section (fix dogfood false-positive on P001 phiếu). Pre-fix: regex matched all `| N |` rows across entire document, inflated by Debate Log template (5 extra rows). Post-fix: scoped between `## Task 0` heading → next `##` heading (level 2 only, fuzzy case-insensitive match). Dogfood P001: exit 1 "10 anchors > 5 cap" → exit 0 "5 anchors".
+
 ### Added
 
 - P001 — `doctor lane-check` subcmd: parse Lane field from phiếu markdown header, count total lines / anchor rows / numbered constraints, gate against Normal (≤250 lines, ≤5 anchors, ≤5 constraints) and Fast (≤100 lines) budgets. Guarded passes unconditionally. Exit codes: 0 OK, 1 budget exceeded, 2 missing Lane field.
