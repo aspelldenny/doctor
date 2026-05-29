@@ -37,8 +37,11 @@ enum Commands {
     /// §6 dòng cap DISCOVERIES/CHANGELOG. Soft 1000 → warn. Hard 1500 → block.
     RotateCheck(cli::rotate_check::Args),
 
-    /// Sub-mech F runtime token leak scan (.git/config, ~/.ssh, .env*, .mcp.json).
+    /// Sub-mech F runtime token leak scan (.git/config, .mcp.json, .claude/settings.local.json, .env*; opt-in ~/.ssh + ~/.gitconfig + ~/.netrc).
     RuntimeScan(cli::runtime_scan::Args),
+
+    /// Q-D5 static wiring-integrity check for the Giám sát (boundary-check) role — kiểm NỐI không kiểm TỐT.
+    VerifySetup(cli::verify_setup::Args),
 
     /// MCP serve mode — exposes subcmds as tools via JSON-RPC 2.0.
     Serve,
@@ -52,6 +55,7 @@ fn main() -> Result<()> {
         Commands::ValidateMap(args) => cli::validate_map::run(args),
         Commands::RotateCheck(args) => cli::rotate_check::run(args),
         Commands::RuntimeScan(args) => cli::runtime_scan::run(args),
+        Commands::VerifySetup(args) => cli::verify_setup::run(args),
         Commands::Serve => {
             let rt = tokio::runtime::Builder::new_current_thread()
                 .enable_all()

@@ -92,6 +92,8 @@ fn collect_targets(repo_root: &Path, include_home: bool) -> Result<Vec<PathBuf>>
     // Always-scan repo files
     targets.push(repo_root.join(".git/config"));
     targets.push(repo_root.join(".mcp.json"));
+    // P306 extend: Claude Code local settings (Bash allowlist may inline token — instance #11)
+    targets.push(repo_root.join(".claude/settings.local.json"));
 
     // .env* files at repo root (non-recursive)
     match read_dir(repo_root) {

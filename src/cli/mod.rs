@@ -4,6 +4,7 @@ pub mod lane_check;
 pub mod validate_map;
 pub mod rotate_check;
 pub mod runtime_scan;
+pub mod verify_setup;
 
 /// Captured output from a subcmd execute() call.
 ///
