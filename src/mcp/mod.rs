@@ -24,7 +24,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use std::path::PathBuf;
 
-use crate::cli::{RunOutput, lane_check, rotate_check, runtime_scan, validate_map};
+use crate::cli::{RunOutput, lane_check, rotate_check, runtime_scan, validate_map, verify_setup};
 
 // ──────────────────────────────────────────────────────────────
 // Tool input structs — #[derive(JsonSchema, Deserialize)]
@@ -62,6 +62,14 @@ pub struct RuntimeScanInput {
     /// Also scan home directory files (~/.ssh/config, ~/.gitconfig, ~/.netrc).
     #[serde(default)]
     pub include_home: Option<bool>,
+}
+
+/// Input for the verify_setup tool.
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct VerifySetupInput {
+    /// Path to repo root (defaults to cwd if omitted).
+    #[serde(default)]
+    pub repo: Option<String>,
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -153,6 +161,21 @@ impl DoctorServer {
             include_home: p.include_home.unwrap_or(false),
         };
         run_to_call_result(runtime_scan::execute(args))
+    }
+
+    /// Verify the Giám sát (boundary-check) role is WIRED not just present (Q-D5): sentinel/verdict contract, rubric source, INVARIANTS file, merge-gate registration. Static — checks NỐI not TỐT.
+    #[tool(
+        name = "verify_setup",
+        description = "Verify the Giám sát (boundary-check) role is WIRED not just present (Q-D5): sentinel/verdict contract match, rubric source, INVARIANTS file, merge-gate registration. Static wiring check — NỐI not TỐT."
+    )]
+    fn verify_setup(
+        &self,
+        Parameters(p): Parameters<VerifySetupInput>,
+    ) -> Result<CallToolResult, ErrorData> {
+        let args = verify_setup::Args {
+            repo: p.repo.map(PathBuf::from),
+        };
+        run_to_call_result(verify_setup::execute(args))
     }
 }
 

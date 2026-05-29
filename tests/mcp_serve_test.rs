@@ -69,11 +69,11 @@ fn find_response(lines: &[serde_json::Value], id: u64) -> Option<&serde_json::Va
 }
 
 // ──────────────────────────────────────────────────────────────
-// Test 1: tools/list returns exactly 4 tool names
+// Test 1: tools/list returns exactly 5 tool names
 // ──────────────────────────────────────────────────────────────
 
 #[test]
-fn tools_list_returns_4_tools() {
+fn tools_list_returns_5_tools() {
     let lines = run_mcp_session(&[INIT_REQUEST, TOOLS_LIST_REQUEST]);
 
     let response = find_response(&lines, 2).expect("no tools/list response found in stdout");
@@ -86,8 +86,8 @@ fn tools_list_returns_4_tools() {
 
     assert_eq!(
         tools.len(),
-        4,
-        "expected 4 tools, got {}. Response: {}",
+        5,
+        "expected 5 tools, got {}. Response: {}",
         tools.len(),
         response
     );
@@ -97,11 +97,16 @@ fn tools_list_returns_4_tools() {
         .filter_map(|t| t.get("name").and_then(|n| n.as_str()))
         .collect();
 
-    let expected: std::collections::HashSet<&str> =
-        ["lane_check", "validate_map", "rotate_check", "runtime_scan"]
-            .iter()
-            .copied()
-            .collect();
+    let expected: std::collections::HashSet<&str> = [
+        "lane_check",
+        "validate_map",
+        "rotate_check",
+        "runtime_scan",
+        "verify_setup",
+    ]
+    .iter()
+    .copied()
+    .collect();
 
     assert_eq!(
         names, expected,
