@@ -1,5 +1,22 @@
 # BACKLOG — doctor
 
+## ⬇ Inbound from tarot (2026-06-05) — trigger gap + ownership boundary
+
+### [TRIGGER] doctor wired MCP nhưng KHÔNG auto-fire
+
+**Observed tarot 2026-06-05:** doctor wired trong `tarot/.mcp.json` + CLI installed, nhưng KHÔNG nằm trong pre-commit hay hook nào → chỉ chạy khi agent/Sếp gọi tay. Bằng chứng trigger gap: phiếu P325 (touch security surface) KHÔNG chạy `doctor runtime-scan` dù CLAUDE.md nói "Worker dùng CLI trong Task 0 khi phiếu touch security surface". On-demand + dựa-agent-nhớ = đúng Sub-mech A.
+
+### [OWNERSHIP] Ranh giới doctor vs inv-gate (tránh trùng scan secrets)
+
+Khi inv-gate (Rust) ship, có overlap cần chốt rõ:
+- **inv-gate INV-009/010** (secrets/runtime state) → own **pre-commit BLOCKING** (thay `tarot/scripts/security-gate.sh`).
+- **doctor `runtime-scan`** (Sub-mech F, cùng quét `.git/config`/`.mcp.json`/`.env*`) → giữ vai **defense-in-depth manual/CI** (KHÔNG wire pre-commit — tránh 2 gate cùng quét). Per `tarot/INVARIANTS.md:181` "wire-doctor-to-pre-commit deferred".
+- **doctor `rotate-check`** (SOUND: đếm+block cap) vs **doc-rotate** (PARTIAL: classify+archive) → tách sạch, không nuốt nhau.
+
+Đề xuất: KHÔNG wire doctor runtime-scan vào tarot pre-commit. Để inv-gate own pre-commit. doctor = portable anchor/lane/rotate enforcement cho mọi repo v2.2.
+
+---
+
 ## Active sprint — post-MVP fix (1 phiếu)
 
 - [ ] **P006** — `doctor lane-check` anchor counter scope fix
