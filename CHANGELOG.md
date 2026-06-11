@@ -7,6 +7,10 @@ Format: Keep a Changelog (https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- Release CI (`.github/workflows/release.yml`) — tag `v*` builds 3 prebuilt targets (mac-arm64 / linux-x64 / win-x64) and attaches to a GitHub Release. Asset naming contract for sos-kit `install.sh` (P064): `doctor-<target-triple>[.exe]`. — 2026-06-11
+
+
 ### Fixed
 
 - P006 — `doctor lane-check` anchor counter scoped to Task 0 section (fix dogfood false-positive on P001 phiếu). Pre-fix: regex matched all `| N |` rows across entire document, inflated by Debate Log template (5 extra rows). Post-fix: scoped between `## Task 0` heading → next `##` heading (level 2 only, fuzzy case-insensitive match). Dogfood P001: exit 1 "10 anchors > 5 cap" → exit 0 "5 anchors".
