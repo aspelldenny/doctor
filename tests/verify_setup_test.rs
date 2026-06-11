@@ -164,3 +164,101 @@ fn not_configured_clean() {
         .code(0)
         .stdout(predicate::str::contains("NOT CONFIGURED"));
 }
+
+// ---------------------------------------------------------------------------
+// Test 6 (positive): shim_hook_connected — B+3 fail-closed shim (sos-kit P064).
+// Hook is a thin shim that execs `claude-hooks block-unsafe-merge`; the sentinel
+// grep and Verdict parse live in the binary, invisible to static grep of hook file.
+// Agent still emits the sentinel and `Verdict:`/APPROVE (agent-side contracts).
+// J1 + J6 must recognise the delegation → CONNECTED rc=0.
+// ---------------------------------------------------------------------------
+#[test]
+fn shim_hook_connected() {
+    let dir: TempDir = tempfile::tempdir().expect("tempdir");
+    let base = dir.path();
+
+    // Agent: emits sentinel + Verdict/APPROVE + inline INV rubric.
+    write(
+        &base.join(".claude/agents/boundary-check.md"),
+        "---\nname: boundary-check\n---\n\
+         # Giám sát\n\
+         INV-101 ownership. INV-102 env. INV-103 webhook. INV-104 idor. INV-105 credit.\n\
+         Verdict: APPROVE | NEEDS_REVIEW (>=1 FLAG)\n\
+         Emit:\n<!-- SECURITY_REVIEW_START -->\nVerdict: APPROVE\n<!-- SECURITY_REVIEW_END -->\n",
+    );
+    // Hook is a B+3 shim — delegates sentinel-grep + Verdict-parse to the binary.
+    // Must still contain `gh pr merge` and `exit 2` so J5 stays WIRED.
+    // The shim_re matches `claude-hooks block-unsafe-merge` (with whitespace between).
+    write(
+        &base.join("scripts/block-unsafe-merge.sh"),
+        "#!/usr/bin/env bash\n\
+         # B+3 fail-closed shim — delegates to claude-hooks binary (sos-kit P064).\n\
+         # gh pr merge is gated via exit 2 from the binary.\n\
+         exec claude-hooks block-unsafe-merge \"$@\"\n\
+         # Fallback: if binary unavailable, fail-closed.\n\
+         exit 2\n",
+    );
+    // INVARIANTS source-of-record.
+    write(
+        &base.join("docs/security/INVARIANTS.md"),
+        "### INV-101 — env\n### INV-102 — webhook\n### INV-103 — idor\n",
+    );
+    // settings.json registers the hook under PreToolUse(Bash).
+    write(
+        &base.join(".claude/settings.json"),
+        "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      { \"matcher\": \"Bash\", \"hooks\": [ { \"type\": \"command\", \"command\": \"bash scripts/block-unsafe-merge.sh\" } ] }\n    ]\n  }\n}\n",
+    );
+
+    doctor()
+        .args(["verify-setup", "--repo", base.to_str().unwrap()])
+        .assert()
+        .success()
+        .code(0)
+        .stdout(predicate::str::contains("CONNECTED"))
+        .stdout(predicate::str::contains("B+3 shim"));
+}
+
+// ---------------------------------------------------------------------------
+// Test 7 (negative): shim_hook_but_agent_missing_verdict — shim hook present
+// (J1 delegates OK) but agent does NOT emit a `Verdict:` line with APPROVE.
+// J6 must remain BROKEN — shim-arm MUST NOT swallow agent-side failures.
+// ---------------------------------------------------------------------------
+#[test]
+fn shim_hook_but_agent_missing_verdict() {
+    let dir: TempDir = tempfile::tempdir().expect("tempdir");
+    let base = dir.path();
+
+    // Agent: emits sentinel but NO Verdict/APPROVE line.
+    write(
+        &base.join(".claude/agents/boundary-check.md"),
+        "---\nname: boundary-check\n---\n\
+         # Giám sát\n\
+         INV-101 ownership. INV-102 env. INV-103 webhook. INV-104 idor. INV-105 credit.\n\
+         Emit:\n<!-- SECURITY_REVIEW_START -->\n<!-- SECURITY_REVIEW_END -->\n",
+    );
+    // Same B+3 shim as test 6.
+    write(
+        &base.join("scripts/block-unsafe-merge.sh"),
+        "#!/usr/bin/env bash\n\
+         # B+3 fail-closed shim — delegates to claude-hooks binary (sos-kit P064).\n\
+         exec claude-hooks block-unsafe-merge \"$@\"\n\
+         # gh pr merge not allowed without APPROVE\n\
+         exit 2\n",
+    );
+    write(
+        &base.join("docs/security/INVARIANTS.md"),
+        "### INV-101 — env\n### INV-102 — webhook\n",
+    );
+    write(
+        &base.join(".claude/settings.json"),
+        "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      { \"matcher\": \"Bash\", \"hooks\": [ { \"type\": \"command\", \"command\": \"bash scripts/block-unsafe-merge.sh\" } ] }\n    ]\n  }\n}\n",
+    );
+
+    doctor()
+        .args(["verify-setup", "--repo", base.to_str().unwrap()])
+        .assert()
+        .failure()
+        .code(1)
+        .stderr(predicate::str::contains("DORMANT"))
+        .stderr(predicate::str::contains("J6 verdict-contract"));
+}

@@ -1,6 +1,6 @@
 [package]
 name = "doctor"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "v2.2 mechanical gate enforcement — lane budget, AGENT_MAP validate, rotate cap, runtime secret scan. CLI + MCP dual mode."
 license = "MIT"
