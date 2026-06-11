@@ -10,9 +10,9 @@ Format: Keep a Changelog (https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Release CI (`.github/workflows/release.yml`) — tag `v*` builds 3 prebuilt targets (mac-arm64 / linux-x64 / win-x64) and attaches to a GitHub Release. Asset naming contract for sos-kit `install.sh` (P064): `doctor-<target-triple>[.exe]`. — 2026-06-11
 
-
 ### Fixed
 
+- P064 (B+3 shim) — `doctor verify-setup` J1/J6 now recognize the fail-closed shim pattern (sos-kit P064, ratified 2026-06-09). Previously, when `scripts/block-unsafe-merge.sh` was a thin shim delegating to `claude-hooks block-unsafe-merge`, static grep of the hook file found no sentinel / no `Verdict:` line → J1 ABSENT + J6 BROKEN → false DORMANT on any repo using the shim. Fix: detect `claude-hooks block-unsafe-merge` in hook content; if delegation present, verify agent-side contracts (emit sentinel, emit `Verdict:`/APPROVE) and mark J1/J6 WIRED. Hook-side half remains the claude-hooks binary's parity suite. — 2026-06-11
 - P006 — `doctor lane-check` anchor counter scoped to Task 0 section (fix dogfood false-positive on P001 phiếu). Pre-fix: regex matched all `| N |` rows across entire document, inflated by Debate Log template (5 extra rows). Post-fix: scoped between `## Task 0` heading → next `##` heading (level 2 only, fuzzy case-insensitive match). Dogfood P001: exit 1 "10 anchors > 5 cap" → exit 0 "5 anchors".
 
 ### Added

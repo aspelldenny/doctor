@@ -119,6 +119,14 @@ pub fn execute(args: Args) -> Result<RunOutput> {
 
     let mut joints: Vec<Joint> = Vec::new();
 
+    // B+3 fail-closed shim (sos-kit P064, ratified 2026-06-09): the merge hook may be a thin
+    // shim that execs the `claude-hooks block-unsafe-merge` binary — the sentinel grep (J1)
+    // and Verdict parse (J6) then live in the binary (ported with parity tests), invisible
+    // to a static grep of the hook FILE. Detect the delegation and verify the agent-side
+    // half of each contract; the hook-side half is the binary parity suite's job.
+    let shim_re = Regex::new(r"claude-hooks(\.exe)?\s+block-unsafe-merge").unwrap();
+    let shim_delegates = hook.as_ref().map(|c| shim_re.is_match(c)).unwrap_or(false);
+
     // ---- J1 sentinel-contract: emit (agent/command) == grep (hook), byte-exact ----
     {
         let emit = agent
@@ -135,6 +143,10 @@ pub fn execute(args: Args) -> Result<RunOutput> {
             (None, _) => (
                 Status::Absent,
                 "no security-review sentinel emitted in agent/command".to_string(),
+            ),
+            (Some(e), None) if shim_delegates => (
+                Status::Wired,
+                format!("emit '{e}' present; hook-side grep delegated to claude-hooks binary (B+3 shim)"),
             ),
             (_, None) => (
                 Status::Absent,
@@ -262,6 +274,11 @@ pub fn execute(args: Args) -> Result<RunOutput> {
             (
                 Status::Wired,
                 "agent emits `Verdict:`/APPROVE == hook parses `^Verdict:`/APPROVE".to_string(),
+            )
+        } else if emit_ok && shim_delegates {
+            (
+                Status::Wired,
+                "agent emits `Verdict:`/APPROVE; hook-side parse delegated to claude-hooks binary (B+3 shim)".to_string(),
             )
         } else if !emit_ok {
             (
