@@ -7,6 +7,11 @@ Format: Keep a Changelog (https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-06-15
+
+### Added
+- Release CI now publishes `.sha256` alongside each binary asset (P071 — Stage 1 checksum publishing). `shasum -a 256` runs after asset packaging; `.sha256` file uploaded to the GitHub Release for all 3 targets. Enables `install.sh` checksum verification in Stage 2.
+
 ### Added
 - Release CI (`.github/workflows/release.yml`) — tag `v*` builds 3 prebuilt targets (mac-arm64 / linux-x64 / win-x64) and attaches to a GitHub Release. Asset naming contract for sos-kit `install.sh` (P064): `doctor-<target-triple>[.exe]`. — 2026-06-11
 

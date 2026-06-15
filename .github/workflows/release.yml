@@ -38,6 +38,9 @@ jobs:
           [[ "${{ matrix.target }}" == *windows* ]] && EXT=".exe"
           cp "target/${{ matrix.target }}/release/${BIN}${EXT}" "${BIN}-${{ matrix.target }}${EXT}"
           echo "ASSET=${BIN}-${{ matrix.target }}${EXT}" >> "$GITHUB_ENV"
+          shasum -a 256 "${BIN}-${{ matrix.target }}${EXT}" > "${BIN}-${{ matrix.target }}${EXT}.sha256"
       - uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.ASSET }}
+          files: |
+            ${{ env.ASSET }}
+            ${{ env.ASSET }}.sha256
