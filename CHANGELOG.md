@@ -7,7 +7,7 @@ Format: Keep a Changelog (https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-## [0.1.2] — 2026-06-15
+## [0.1.3] — 2026-06-15
 
 ### Added
 - Release CI now publishes `.sha256` alongside each binary asset (P071 — Stage 1 checksum publishing). `shasum -a 256` runs after asset packaging; `.sha256` file uploaded to the GitHub Release for all 3 targets. Enables `install.sh` checksum verification in Stage 2.
