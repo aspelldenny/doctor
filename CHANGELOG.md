@@ -7,7 +7,10 @@ Format: Keep a Changelog (https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-## [0.1.3] — 2026-06-15
+## [0.1.3] — 2026-06-15 (amended P072)
+
+### Changed
+- Release CI: bump Node20 actions to node24 — `actions/checkout@v4→v5`, `softprops/action-gh-release@v2→v3`, `actions/github-script@v7→v8`. Add `prerelease: ${{ contains(github.ref_name, '-rc') }}` so rc tags publish as prereleases (P072 fleet Node20 bump, GitHub deprecation deadline 16/06/2026).
 
 ### Added
 - Release CI now publishes `.sha256` alongside each binary asset (P071 — Stage 1 checksum publishing). `shasum -a 256` runs after asset packaging; `.sha256` file uploaded to the GitHub Release for all 3 targets. Enables `install.sh` checksum verification in Stage 2.
